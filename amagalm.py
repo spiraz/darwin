@@ -27,12 +27,16 @@ def spc(population):
     # ------------------------Single Point Crossover-------------------------------
     # Select smallest parent. We need to trade equal genes between the two parents, so we can't select the biggest.
     
+    if not population:
+        print("No population has been passed to spc.")
+        exit()
+
     smallest = len(population[0].genes)
     
     #check the length of the smallest parent
     for i in population:
         if len(i.genes) < smallest:
-            smallest = i
+            smallest = len(i.genes)
 
     #generate a random crossover point within the range length of the smallest parent
     crossover_point = random.randint(1, smallest-1)#if we don't use smallest-1, the max length may be picked, assigning the whole parent to the corresponding first_half, while leaving second_half empty
@@ -65,23 +69,35 @@ def spc(population):
             if new_offspring not in parents_genes_int:#check if offsprings do not match parents
                 new_offsprings.append(new_offspring)
 
-    return new_offsprings
+
+    if new_offsprings:
+
+        new_offsprings_obj = []
+        for i in new_offsprings:
+            individual = Chromosome(i, fitness=1, mutation=0.85)
+            new_offsprings_obj.append(individual)
+    
+    
+    if new_offsprings_obj:
+        return new_offsprings_obj
+    else:
+        return []
 
 def kpc(parents,crossover_points_number):
-#------------------------K Point Crossover-------------------------------
-#select smallest parent. we need to trade equal genes between the two parents, so we can't select one just randomly
-#the last index of a list is always len(list)-1. so, if you try to use list[len(list)] you get an error. you have to use length-1. THIS IS NOT TRUE IN CONJUCTION WITH range, because range(5) will reach up to 4
+    #------------------------K Point Crossover-------------------------------
+    #select smallest parent. we need to trade equal genes between the two parents, so we can't select one just randomly
+    #the last index of a list is always len(list)-1. so, if you try to use list[len(list)] you get an error. you have to use length-1. THIS IS NOT TRUE IN CONJUCTION WITH range, because range(5) will reach up to 4
+        
+    #the helper lists serve to collect all the genes in the in-between crosspoint spaces for all parents. 1st has all the genes for each parent from start to 1st crosspoint, while last has the genes from last
+    #crosspoint to the end of each parent.
+        
+    #middle is a bit more complicated. It is meant to be a list of lists. Each outer list element holds lists with all genes for a given crossover space for each parent,
+    #but does so in a separate list for each parent. So, for crosspoints 4,5,8, middle[0] will hold the crosspoint space 4-5 for all parents, a separate list for each one.
+    #The second one will hold all genes from 5-8.
+        
+    #Finally, we use 1st, last and the middle lists, which now hold the parents' gene sequences, to stitch together the offsprings
     
-#the helper lists serve to collect all the genes in the in-between crosspoint spaces for all parents. 1st has all the genes for each parent from start to 1st crosspoint, while last has the genes from last
-#crosspoint to the end of each parent.
-    
-#middle is a bit more complicated. It is meant to be a list of lists. Each outer list element holds lists with all genes for a given crossover space for each parent,
-#but does so in a separate list for each parent. So, for crosspoints 4,5,8, middle[0] will hold the crosspoint space 4-5 for all parents, a separate list for each one.
-#The second one will hold all genes from 5-8.
-    
-#Finally, we use 1st, last and the middle lists, which now hold the parents' gene sequences, to stitch together the offsprings
- 
-#---- PART 1--- GENERATE CROSSOVER POINTS
+    #---- PART 1--- GENERATE CROSSOVER POINTS
  
  #check if the given crossover points number is legit
     if crossover_points_number == 1:
@@ -91,12 +107,18 @@ def kpc(parents,crossover_points_number):
         print("Stop messing around and provide a number => 2 for your crossover points!")
         exit()
  
+    #set random parent's length to later find smallest parent
+    if len(parents) < 2:
+        print("Less than 2  parents passed to kpc")
+        exit()
+
+    smallest_parent_len=len(parents[0].genes)
+    
+    
     offspring_middle_groups_helper = [] 
     offspring_1st_genes_helper = []
     offspring_last_genes_helper = []
-    
-    #set random parent's length to later find smallest parent
-    smallest_parent_len=len(parents[0].genes)
+
     
     for i in parents:
         if len(i.genes) < smallest_parent_len:
@@ -162,17 +184,24 @@ def kpc(parents,crossover_points_number):
     
     for x in range(len(parents)):#len(parents) to generate as many offsprings as parents we get
 
-        offsprings_gene_seq_union = offspring_1st_genes_helper[x]
+        offsprings_genes = offspring_1st_genes_helper[x]
         
         for i in range(len(offspring_middle_groups_helper)):#to each offspring, add a gene sequence for each of the middle crossover spaces, from a random parent, thus creating a totally new offspring
             gene_seq_used=random.randint(0,len(offspring_middle_groups_helper[i])-1)#usage of variable to hold the selected index just to be able to print and report. -1 because, same as crossover points-1, if random gets the full length, we get an error, as the list has always one less index than its length. len(offspring_middle_groups_helper[i])-1 or parents-1 has to be used, because we need to pick a random element from each inner list. each len(offspring_middle_groups_helper[i])==  len(parents), so we can use either len(offspring_middle_groups_helper[i])-1 or parents-1. If offspring_middle_groups_helper[i] != len(parents) WE CAN NOT USE EITHER. WE MOST PROBABLY HAVE TO USE THE FIRST ONE. All this happens because each offspring_middle_groups_helper[i] grows or shrinks in length along with the parents. so if len(parents =30 then  len(offspring_middle_groups_helper[i])=30
-            offsprings_gene_seq_union = offsprings_gene_seq_union + offspring_middle_groups_helper[i][gene_seq_used]
+            offsprings_genes = offsprings_genes + offspring_middle_groups_helper[i][gene_seq_used]
 
         #get new random index to use for getting the last part of the offsprings
         gene_seq_used=random.randint(0,len(parents)-1)#usage of variable to hold the selected index just to be able to print and report. As long as we are generating the same number of offsprings as parents, we can use the len(parents)-1 here
-        offsprings_gene_seq_union = offsprings_gene_seq_union + offspring_last_genes_helper[gene_seq_used]
+        offsprings_genes = offsprings_genes + offspring_last_genes_helper[gene_seq_used]
 
-        offsprings.append(offsprings_gene_seq_union)
+        # offspring_obj = Chromosome(
+        # offsprings_genes,
+        # fitness=1,
+        # mutation=0.85
+        # )
+
+        offsprings.append(offsprings_genes)
+        offsprings.append(offspring_obj)
 
     
 #----- PART 4 --- CHECKING FOR DUPLICATES IN THE OFFSPRINGS PLUS IF ANY OFFSPRINGS MATCH ANY OF THE PARENTS. THEN CREATING THE FINAL OFFSPRINGS LIST WHICH WILL RETURN TO THE MAIN PROGRAM
@@ -205,33 +234,38 @@ def kpc(parents,crossover_points_number):
                 break
     
     if offsprings_to_keep:
-        return offsprings_to_keep
+
+        offsprings_to_keep_obj = []
+        for i in offsprings_to_keep:
+            individual = Chromosome(i, fitness=1, mutation=0.85)
+            offsprings_to_keep_obj.append(individual)
+    
+    
+    
+    if offsprings_to_keep_obj:
+        return offsprings_to_keep_obj
     else:
-        return
+        return []
 
 def mutation(population, gene_mutation_rate):
-	mutated_chromosomes = []
+	
+    mutated_chromosomes = []
 	
 	for parent in population:
 		# Create a deep copy of the parent chromosome
 		mutated_parent = copy.deepcopy(parent) #when you create a copy of a list or object, it creates a reference to the original data rather than creating a new independent copy. This means that if you modify the copied variable, the original variable will also be affected.
 		
         #roll a number from 0 to 100 for each bit. if it's smaller than the mutation rate, flip the bit
-		for i in range(len(mutated_parent)):
+		for i in range(len(mutated_parent.genes)):
 			if random.randrange(0, 100) < gene_mutation_rate:
-				mutated_parent[i] = 1 - mutated_parent[i]  # Flip the bit
+				mutated_parent.genes[i] = 1 - mutated_parent.genes[i]  # Flip the bit
 		
 		# Check if mutated parent matches any original parent. If not add to the list to return
 		if mutated_parent != parent:
 			mutated_chromosomes.append(mutated_parent)
-			# print(f"Mutated parent is different from original parent.", mutated_parent)
-		# else:
-			# print(f"Mutated parent matches original parent.", mutated_parent)
 	
 	if mutated_chromosomes:
 		return mutated_chromosomes
-	else:
-		return
 
 def mutation_2layer(population, gene_mutation_rate, parent_mutation_rate):			
 	mutated_chromosomes = []
@@ -242,9 +276,9 @@ def mutation_2layer(population, gene_mutation_rate, parent_mutation_rate):
 		
         #roll a number from 0 to 100. if it is smaller than parent_mutation_rate, then roll a number for each bit of the chromosome. this is a 2layer mutation mechanic
 		if random.randrange(0,100) < parent_mutation_rate:
-			for i in range(len(mutated_parent)):
+			for i in range(len(mutated_parent.genes)):
 				if random.randrange(0, 100) < gene_mutation_rate:
-					mutated_parent[i] = 1 - mutated_parent[i]  # Flip the bit
+					mutated_parent.genes[i] = 1 - mutated_parent.genes[i]   # Flip the bit
 
 			# Check if mutated parent matches any original parent
 			if mutated_parent != parent:
@@ -255,8 +289,6 @@ def mutation_2layer(population, gene_mutation_rate, parent_mutation_rate):
 	
 	if mutated_chromosomes:
 		return mutated_chromosomes
-	else:
-		return
 
 def classic_roulette(population):
 	total_population_fitness = sum([i.fitness for i in population])#adds fitness values from all input parents together
@@ -315,7 +347,7 @@ def roulette_multiparents_same_parent(population,no_of_parents_returned):
 
 	random_numbers = []
 
-	#generate unique random numbers and add them to a list. this stops when the random numbers generated are more than no_of_parents_returned
+	#generate random numbers and add them to a list. this stops when the random numbers generated are more than no_of_parents_returned
 	while len(random_numbers) < no_of_parents_returned:
 		random_number=round(random.random(), 2)
 		random_numbers.append(random_number)
@@ -393,10 +425,10 @@ def roulette_unique_parents(population,no_of_parents_returned):
 		return
 
 def cull_by_percentage(parents, percentage_to_cull, no_of_parents_to_select):
-#cull_by_percentage function has to return enough parents to pass the checks of the other functions (crossover and selection). Naturally, crossover cant return more parents than it gets.
-#kpc needs at least 2 parents to function. so we put a hard limit to this. if the population is thinned too much, there is a chance less parents will be left for selection.
-#so if, for example, 2 parents are left, and we have determined 3 to be chosen at the selection stage, then we get an error.
-#Using no_of_parents_to_select we secure this won't happen, because the selection stage gets the same number of parents as the condition to apply or not cull below => if len(next_gen) >= no_of_parents_to_select
+    #cull_by_percentage function has to return enough parents to pass the checks of the other functions (crossover and selection). Naturally, crossover cant return more parents than it gets.
+    #kpc needs at least 2 parents to function. so we put a hard limit to this. if the population is thinned too much, there is a chance less parents will be left for selection.
+    #so if, for example, 2 parents are left, and we have determined 3 to be chosen at the selection stage, then we get an error.
+    #Using no_of_parents_to_select we secure this won't happen, because the selection stage gets the same number of parents as the condition to apply or not cull below => if len(next_gen) >= no_of_parents_to_select
     
     sorted_individuals = sorted(parents, key=lambda x: x.fitness, reverse=True)#reverse=True => highest to lowest
     
@@ -443,9 +475,9 @@ for iterator in range(5):
 
 # while True:
     
-    # uni=roulette_unique_parents(gen0_objects,3)
+    # uni=roulette_unique_parents(gen0_objects,3) - selection
     
-    offsprings=kpc(gen0_objects, 3)
+    crossover/offsprings=kpc(gen0_objects, 3)
 
     offsprings_obj = []
 
@@ -468,10 +500,6 @@ for iterator in range(5):
     # print(len(offsprings))
     next_gen=cull_by_percentage(offsprings_obj, 20, 10)
     if next_gen:
-        next_gen_obj = []
-        for i in next_gen:
-            individual = Chromosome(i, fitness=1, mutation=0.85)
-            next_gen_obj.append(individual)
         print("before cull:",len(offsprings_obj))
         gen0_objects = next_gen
         print("after cull:",len(gen0_objects))
