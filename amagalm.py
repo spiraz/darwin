@@ -19,7 +19,8 @@ def gen0_binary(population_number, genes_no):
         for g in range(genes_no):  # Number of genes for each chromosome
             genes.append(random.randint(0, 1))
         
-        chromosome_list.append(genes)
+    individual = Chromosome(i, fitness=1, mutation=0.85)
+    chromosome_list.append(individual)
 
     return chromosome_list
 
@@ -28,8 +29,8 @@ def spc(population):
     # Select smallest parent. We need to trade equal genes between the two parents, so we can't select the biggest.
     
     if not population:
-        print("No population has been passed to spc.")
-        exit()
+        raise ValueError("No population has been passed to spc."
+    )
 
     smallest = len(population[0].genes)
     
@@ -38,6 +39,14 @@ def spc(population):
         if len(i.genes) < smallest:
             smallest = len(i.genes)
 
+
+    #check if the smallest parent has more than 2 genes, because the next part will fail if not.
+    if smallest < 2:
+        raise ValueError(
+            "Single-point crossover requires chromosomes "
+            "with at least 2 genes."
+        )
+    
     #generate a random crossover point within the range length of the smallest parent
     crossover_point = random.randint(1, smallest-1)#if we don't use smallest-1, the max length may be picked, assigning the whole parent to the corresponding first_half, while leaving second_half empty
     
@@ -51,37 +60,65 @@ def spc(population):
         second_half = i.genes[crossover_point:]
         second_halves.append(second_half)
     
-    
-    #get all the chromosome sequences form the parents to check if there are offsprings with the same sequence. This helps not having offsprings same to the parents
-    parents_genes_int = []
-
-    for i in population:
-        parents_genes_int.append(i.genes)
-    
+    #make the new offsprings
     new_offsprings = []
     
-    #make the new offsprings
-    for i in first_halves:
+    for first_half in first_halves:
         second_half_to_use = random.randint(0,len(second_halves)-1)#pick a random second half to stitch to the first half. always use -1 when using the max length as an index. else you get out of indexes
-        new_offspring = i+second_halves[second_half_to_use]#stitch them together
+        new_offspring = first_half+second_halves[second_half_to_use]#stitch them together
         
-        if new_offspring not in new_offsprings:#check for duplicates
-            if new_offspring not in parents_genes_int:#check if offsprings do not match parents
+
+        #check for duplicates && if the offsprings match the parents
+        if new_offspring not in new_offsprings:
+
+            #check if the offsprings match the parents. We are only keeping offsprings that are both unique and do not match a parent. So,there is no need to check if both conditions apply to all offsprings.
+            #If one condition does not apply, we do not need to check for the other since we won't be keeping the offspring.
+            #Since,there are better chances for the population to be bigger than the offsprings produced in kpc, we first check if there are duplicate offsprings.
+            #If an offspring is a duplicate, we skip the matching parent check,saving resources.
+            is_parent = False
+            
+            #here, we are comparing offsprings (list of ints) with genes (object attribute with list of ints)
+            for parent in population:
+                if new_offspring == parent.genes:
+                    is_parent = True
+                    break
+
+            if not is_parent:#clear duplicates & make into objects
                 new_offsprings.append(new_offspring)
 
+    offsprings_to_keep= []
 
-    if new_offsprings:
+    for offspring in new_offsprings:
+        individual = Chromosome(offspring, fitness=1, mutation=0.85)
+        offsprings_to_keep.append(individual)
+    
+    return offsprings_to_keep
 
-        new_offsprings_obj = []
-        for i in new_offsprings:
-            individual = Chromosome(i, fitness=1, mutation=0.85)
-            new_offsprings_obj.append(individual)
+    #--------------------extras - check if they fit in--------------------------------
     
+
     
-    if new_offsprings_obj:
-        return new_offsprings_obj
-    else:
-        return []
+    #check if the final offsprings truly have no duplicates
+    # for i in range(len(offsprings_to_keep)):
+    #     sublist = offsprings_to_keep[i]
+    #     for j in range(i + 1, len(offsprings_to_keep)):
+    #         if sublist == offsprings_to_keep[j]:
+    #             print("\n-----------THERE IS A DUPLICATE OFFSPRING!!!\n---------------------")
+    #             break
+
+    
+    # unique_offsprings = []
+
+    # for offspring in offsprings_to_keep:
+    #     duplicate = False
+
+    #     for existing in unique_offsprings:
+    #         if offspring.genes == existing.genes:
+    #             duplicate = True
+    #             break
+
+    #     if not duplicate:
+    #         unique_offsprings.append(offspring)
 
 def kpc(parents,crossover_points_number):
     #------------------------K Point Crossover-------------------------------
@@ -101,16 +138,17 @@ def kpc(parents,crossover_points_number):
  
  #check if the given crossover points number is legit
     if crossover_points_number == 1:
-        print("Son, if you want to use Single Point crossover just call spc! This function is designed for =>2 crossover points!")
-        exit()
+        raise ValueError("Son, if you want to use Single Point crossover just call spc! This function is designed for =>2 crossover points!"
+    )
+
     elif crossover_points_number < 1:
-        print("Stop messing around and provide a number => 2 for your crossover points!")
-        exit()
+        raise ValueError("Stop messing around and provide a number => 2 for your crossover points!"
+    )
  
     #set random parent's length to later find smallest parent
     if len(parents) < 2:
-        print("Less than 2  parents passed to kpc")
-        exit()
+        raise ValueError("Less than 2  parents passed to kpc"
+    )
 
     smallest_parent_len=len(parents[0].genes)
     
@@ -126,8 +164,8 @@ def kpc(parents,crossover_points_number):
     
     #check if crossover_points_number is higher than smallest_parent_len. if it is, the program exits because you cant request more crossover points than the parents length
     if smallest_parent_len <= crossover_points_number:
-        print("You can't create more crossover points than the smallest parents length. This program will now exit.")
-        exit()
+        raise ValueError("You can't create more crossover points than the smallest parents length. This program will now exit."
+        )
     
     #create crossover points. the total number is given by the user. We create random crossover points and then sort them. Each crossover point is unique,
     #meaning each number will only appear once in the list. The numbers in this list will be used to break down the parents to random gene sequences.
@@ -143,17 +181,17 @@ def kpc(parents,crossover_points_number):
     
     #below are some checks
     if smallest_parent_len < crossover_points[-1]:#we can't have the biggest crossover point not being able to be used as an index in the smallest parent
-        print("Crossover points biggest index is bigger than smallest parent's length")
-        exit()
+        raise ValueError("Crossover points biggest index is bigger than smallest parent's length"
+    )
 
     if crossover_points_number > smallest_parent_len: #if smallest parent's length is smaller than the amount of crossover points chosen you will get an error
-        print("Wow! Easy there, lad. You can't have more crossover points than the smallest parent's elements! Get yourself serious, boy!")
-        print("total crossover points chosen:",crossover_points_number)
-        print("smallest parent length:",smallest_parent_len)
-        exit()
+        raise ValueError("Wow! Easy there, lad. You can't have more crossover points than the smallest parent's elements! Get yourself serious, boy!"
+        "total crossover points chosen:",crossover_points_number
+        "smallest parent length:",smallest_parent_len
+    )
 
 
-#----PART 2 ----- SLICE THE PARENTS TO CREATE RANDOM GENE SEQUENCES
+    #----PART 2 ----- SLICE THE PARENTS TO CREATE RANDOM GENE SEQUENCES
 
     #construct middle groups list. Add lists equal to the total crossover spaces, excluding [0]-1st crosspoint and [-1]-end of genes list
     for i in range(len(crossover_points)-1): #The crossover in-between spaces are always one less than the total crossover points => crossover spaces = len(crossover_points)-1
@@ -171,7 +209,7 @@ def kpc(parents,crossover_points_number):
 
         offspring_last_genes_helper.append(parents[j].genes[crossover_points[i+1]:])#add to the list to construct the offsprings later. If we allow kpc to take in only one point for crossover, this point hits a problem. because crossover points has only 1 element, there is no next element to acces with crossover_points[i+1]
     
-#----- PART 3 --- STITCH 'EM TOGETHER
+    #----- PART 3 --- STITCH 'EM TOGETHER
 
     #stitch the parent gene sequences together. it will be composed of an outer list, and each element will be another list. if you join all the inner lists of an elemenet together
     #you get the offspring.
@@ -194,58 +232,47 @@ def kpc(parents,crossover_points_number):
         gene_seq_used=random.randint(0,len(parents)-1)#usage of variable to hold the selected index just to be able to print and report. As long as we are generating the same number of offsprings as parents, we can use the len(parents)-1 here
         offsprings_genes = offsprings_genes + offspring_last_genes_helper[gene_seq_used]
 
-        # offspring_obj = Chromosome(
-        # offsprings_genes,
-        # fitness=1,
-        # mutation=0.85
-        # )
-
         offsprings.append(offsprings_genes)
-        offsprings.append(offspring_obj)
 
     
-#----- PART 4 --- CHECKING FOR DUPLICATES IN THE OFFSPRINGS PLUS IF ANY OFFSPRINGS MATCH ANY OF THE PARENTS. THEN CREATING THE FINAL OFFSPRINGS LIST WHICH WILL RETURN TO THE MAIN PROGRAM
-    
-    
-    # new list with parents.genes to easily check if offsprings match initial parents
-    parents_genes_int = []
-    
-    for i in parents:
-        parents_genes_int.append(i.genes)
-    
+    #----- PART 4 --- CHECKING FOR DUPLICATES IN THE OFFSPRINGS PLUS IF ANY OFFSPRINGS MATCH ANY OF THE PARENTS. THEN CREATING THE FINAL OFFSPRINGS LIST WHICH WILL RETURN TO THE MAIN PROGRAM   
+
+
+    #check for duplicates && if the offsprings match the parents
+    #check if the offsprings match the parents. We are only keeping offsprings that are both unique and do not match a parent.
+    #If one condition does not apply, we do not need to check for the other since we won't be keeping the offspring.
+    #Since,there are better chances for the population to be bigger than the offsprings produced in kpc, we first check if there are duplicate offsprings.
+    #If an offspring is a duplicate, we skip the matching parent check,saving resources.
+
+
     offsprings_to_keep = [] 
-    
-    for i in offsprings:
-        if i not in offsprings_to_keep:#clear duplicates
-            if i not in parents_genes_int:# check for any offsprings that may match any parent and add them to a new the list.
-                offsprings_to_keep.append(i)
-    
-    #check if the final offsprings match any of the parents
-    for i in offsprings_to_keep:
-        if i in parents_genes_int:
-            print("\n-----------THERE IS AN OFFSPRING MATCHING A PARENT!!!\n---------------------")
-    
-    #check if the final offsprings truly have no duplicates
-    for i in range(len(offsprings_to_keep)):
-        sublist = offsprings_to_keep[i]
-        for j in range(i + 1, len(offsprings_to_keep)):
-            if sublist == offsprings_to_keep[j]:
-                print("\n-----------THERE IS A DUPLICATE OFFSPRING!!!\n---------------------")
-                break
-    
-    if offsprings_to_keep:
 
-        offsprings_to_keep_obj = []
-        for i in offsprings_to_keep:
-            individual = Chromosome(i, fitness=1, mutation=0.85)
-            offsprings_to_keep_obj.append(individual)
-    
-    
-    
-    if offsprings_to_keep_obj:
-        return offsprings_to_keep_obj
-    else:
-        return []
+    for offspring in offsprings:
+        if offspring not in offsprings:
+            is_parent = False
+            #here, we are comparing offsprings (list of ints) with genes (object attribute with list of ints)
+            for parent in parents:
+                if offspring == parent.genes:
+                    is_parent = True
+                    break
+
+            if not is_parent:#clear duplicates & make into objects
+                individual = Chromosome(offspring, fitness=1, mutation=0.85)
+                offsprings_to_keep.append(individual)
+
+    return offsprings_to_keep
+
+
+
+    #extras-----------------
+
+    #check if the final offsprings truly have no duplicates
+    # for i in range(len(offsprings_to_keep)):
+    #     sublist = offsprings_to_keep[i]
+    #     for j in range(i + 1, len(offsprings_to_keep)):
+    #         if sublist == offsprings_to_keep[j]:
+    #             print("\n-----------THERE IS A DUPLICATE OFFSPRING!!!\n---------------------")
+    #             break
 
 def mutation(population, gene_mutation_rate):
 	
@@ -430,13 +457,22 @@ def cull_by_percentage(parents, percentage_to_cull, no_of_parents_to_select):
     #so if, for example, 2 parents are left, and we have determined 3 to be chosen at the selection stage, then we get an error.
     #Using no_of_parents_to_select we secure this won't happen, because the selection stage gets the same number of parents as the condition to apply or not cull below => if len(next_gen) >= no_of_parents_to_select
     
+   if not 0 <= percentage_to_cull <= 100:
+        raise ValueError(
+            "C'mon man, percentage_to_cull must be between 0 and 100."
+        )
+
+     if len(parents) < no_of_parents_to_select:
+        raise ValueError(
+            "C'mon man, Population is smaller than the required number of parents to select."
+
     sorted_individuals = sorted(parents, key=lambda x: x.fitness, reverse=True)#reverse=True => highest to lowest
     
     next_gen = []
     #turn given percentage to the corresponding number of parents that should be removed
     no_of_parents_removed = math.floor((percentage_to_cull / 100) * len(sorted_individuals))
-    print("initial of cull:",len(sorted_individuals))
-    print("parents removed:",no_of_parents_removed)
+    print("Initial population before cull:",len(sorted_individuals))
+    print("No of parents removed:",no_of_parents_removed)
     # print("===============")
     
     if no_of_parents_removed != 0:
@@ -444,8 +480,11 @@ def cull_by_percentage(parents, percentage_to_cull, no_of_parents_to_select):
         print("next gen:",len(next_gen))
         if len(sorted_individuals) - len(next_gen) != no_of_parents_removed:
             print("Culling does not remove parents as expected. It is supposed to remove no_of_parents_removed from the bottom of the parents' list and return the rest, but there is a mixup in the calculations within the function")
-        if len(next_gen) >= no_of_parents_to_select:#kpc needs at least no_of_parents_to_select parents to function, so we put a hard limit to this.
-            return next_gen
+        if len(next_gen) >= no_of_parents_to_select:#check if the returned individuals are 
+            return next_gen'
+        else:
+            print("You are asking less individuals to be returned than the number of parents to be selected. There will be no culling")
+            return sorted_individuals
 		
     else:
         print("total parents", len(sorted_individuals))
@@ -455,52 +494,32 @@ def cull_by_percentage(parents, percentage_to_cull, no_of_parents_to_select):
 
 
 
+#----------initialization of first population-------------------------------
+
 #gen0_binary creates lists of genes. 1st is the number of parents created. 2nd is the number of genes for each.
-gen0 = gen0_binary(20, 10)
+population = gen0_binary(20, 10)
 
-#after gen0_binary, the parents are mere lists of genes. We have to turn them into objects
-gen0_objects = []
 
-for i in gen0:
-    #i=genes. you can enter any other desired attributes like this. You can also do it for each parent separately
-    individual = Chromosome(i, fitness=1, mutation=0.85)
-    gen0_objects.append(individual)
+
 
 for iterator in range(5):
-# while True:
-    # offs=spc(gen0_objects)
-
-# for i in offs:
-    # print(i)
 
 # while True:
-    
-    # uni=roulette_unique_parents(gen0_objects,3) - selection
-    
-    crossover/offsprings=kpc(gen0_objects, 3)
 
-    offsprings_obj = []
+    #----------selection step----------------------------- 
+    selection=roulette_unique_parents(population,3)
+    
+# crossover - produce offsprings
+    offsprings=kpc(selection, 3)
 
+# mutation
     if offsprings:
         mutated = mutation(offsprings, 20)
-        # print("offsprings:",len(offsprings))
 
         if mutated:
-            
-            # print("mutated:",len(mutated))
             offsprings = offsprings + mutated
-            # print("total:",len(offsprings))
 
-    if offsprings:
-        # print(type(offsprings))
-        for i in offsprings:
-            individual = Chromosome(i, fitness=1, mutation=0.85)
-            offsprings_obj.append(individual)
-
-    # print(len(offsprings))
-    next_gen=cull_by_percentage(offsprings_obj, 20, 10)
+    # cull population
+    next_gen=cull_by_percentage(offsprings, 20, 10)
     if next_gen:
-        print("before cull:",len(offsprings_obj))
-        gen0_objects = next_gen
-        print("after cull:",len(gen0_objects))
-        print("====================")
+        population = next_gen
