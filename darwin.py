@@ -10,7 +10,7 @@ class Chromosome:
             setattr(self, key, value)  # Dynamically add other attributes
 
 def gen0_binary(population_number, genes_no):
-    #create generation 0. given the number of parents and their genes number, this function creates chromosomes with the desired number of BINARY genes. This function returns a list of lists
+    #create generation 0. given the number of parents and their genes number, this function creates chromosomes with the desired number of BINARY genes.
     chromosome_list = []
     
     for i in range(population_number):  # Total number of generation 0 chromosomes
@@ -19,8 +19,8 @@ def gen0_binary(population_number, genes_no):
         for g in range(genes_no):  # Number of genes for each chromosome
             genes.append(random.randint(0, 1))
         
-    individual = Chromosome(i, fitness=1, mutation=0.85)
-    chromosome_list.append(individual)
+        individual = Chromosome(genes, fitness=1)
+        chromosome_list.append(individual)
 
     return chromosome_list
 
@@ -31,6 +31,9 @@ def spc(population):
     if not population:
         raise ValueError("No population has been passed to spc."
     )
+
+    if len(population) < 2:
+        raise ValueError("Single-point crossover requires at least 2 parents.")
 
     smallest = len(population[0].genes)
     
@@ -89,9 +92,11 @@ def spc(population):
     offsprings_to_keep= []
 
     for offspring in new_offsprings:
-        individual = Chromosome(offspring, fitness=1, mutation=0.85)
+        individual = Chromosome(offspring, fitness=1)
         offsprings_to_keep.append(individual)
     
+    # print("===SPC===")
+    # print("Number of offsprings produced:", len(offsprings_to_keep),"\n")
     return offsprings_to_keep
 
     #--------------------extras - check if they fit in--------------------------------
@@ -136,7 +141,14 @@ def kpc(parents,crossover_points_number):
     
     #---- PART 1--- GENERATE CROSSOVER POINTS
  
- #check if the given crossover points number is legit
+    if not parents:
+        raise ValueError("No parents has been passed to Kpc."
+    )
+    
+    #check if the given crossover points number is legit
+    if not isinstance(crossover_points_number, int) or isinstance(crossover_points_number, bool):
+        raise TypeError("crossover_points_number must be an integer.")
+    
     if crossover_points_number == 1:
         raise ValueError("Son, if you want to use Single Point crossover just call spc! This function is designed for =>2 crossover points!"
     )
@@ -144,7 +156,7 @@ def kpc(parents,crossover_points_number):
     elif crossover_points_number < 1:
         raise ValueError("Stop messing around and provide a number => 2 for your crossover points!"
     )
- 
+
     #set random parent's length to later find smallest parent
     if len(parents) < 2:
         raise ValueError("Less than 2  parents passed to kpc"
@@ -164,7 +176,7 @@ def kpc(parents,crossover_points_number):
     
     #check if crossover_points_number is higher than smallest_parent_len. if it is, the program exits because you cant request more crossover points than the parents length
     if smallest_parent_len <= crossover_points_number:
-        raise ValueError("You can't create more crossover points than the smallest parents length. This program will now exit."
+        raise ValueError("You can't create more crossover points than the smallest parents length."
         )
     
     #create crossover points. the total number is given by the user. We create random crossover points and then sort them. Each crossover point is unique,
@@ -177,19 +189,6 @@ def kpc(parents,crossover_points_number):
     
     crossover_points.sort()
     # print("--------------\ncrossover points:",crossover_points,"\n--------------")
-    
-    
-    #below are some checks
-    if smallest_parent_len < crossover_points[-1]:#we can't have the biggest crossover point not being able to be used as an index in the smallest parent
-        raise ValueError("Crossover points biggest index is bigger than smallest parent's length"
-    )
-
-    if crossover_points_number > smallest_parent_len: #if smallest parent's length is smaller than the amount of crossover points chosen you will get an error
-        raise ValueError("Wow! Easy there, lad. You can't have more crossover points than the smallest parent's elements! Get yourself serious, boy!"
-        "total crossover points chosen:",crossover_points_number
-        "smallest parent length:",smallest_parent_len
-    )
-
 
     #----PART 2 ----- SLICE THE PARENTS TO CREATE RANDOM GENE SEQUENCES
 
@@ -201,13 +200,14 @@ def kpc(parents,crossover_points_number):
 
     for j in range(len(parents)):
 
-        offspring_1st_genes_helper.append(parents[j].genes[:crossover_points[0]]) #add to the list to construct the offsprings later
+        offspring_1st_part = parents[j].genes[:crossover_points[0]]#slice up to first index
+        offspring_1st_genes_helper.append(offspring_1st_part) #add to the list to construct the offsprings later
 
         for i in range(len(crossover_points)-1):#The crossover in-between spaces are always one less than the total crossover points #crossover spaces = len(crossover_points)-1
 
             offspring_middle_groups_helper[i].append(parents[j].genes[crossover_points[i]:crossover_points[i+1]])#add to the list to construct the offsprings later
 
-        offspring_last_genes_helper.append(parents[j].genes[crossover_points[i+1]:])#add to the list to construct the offsprings later. If we allow kpc to take in only one point for crossover, this point hits a problem. because crossover points has only 1 element, there is no next element to acces with crossover_points[i+1]
+        offspring_last_genes_helper.append(parents[j].genes[crossover_points[-1]:])#add to the list to construct the offsprings later. If we allow kpc to take in only one point for crossover, this point hits a problem. because crossover points has only 1 element, there is no next element to acces with crossover_points[i+1]
     
     #----- PART 3 --- STITCH 'EM TOGETHER
 
@@ -232,7 +232,8 @@ def kpc(parents,crossover_points_number):
         gene_seq_used=random.randint(0,len(parents)-1)#usage of variable to hold the selected index just to be able to print and report. As long as we are generating the same number of offsprings as parents, we can use the len(parents)-1 here
         offsprings_genes = offsprings_genes + offspring_last_genes_helper[gene_seq_used]
 
-        offsprings.append(offsprings_genes)
+        if offsprings_genes not in offsprings:#duplicate check
+            offsprings.append(offsprings_genes)
 
     
     #----- PART 4 --- CHECKING FOR DUPLICATES IN THE OFFSPRINGS PLUS IF ANY OFFSPRINGS MATCH ANY OF THE PARENTS. THEN CREATING THE FINAL OFFSPRINGS LIST WHICH WILL RETURN TO THE MAIN PROGRAM   
@@ -248,18 +249,19 @@ def kpc(parents,crossover_points_number):
     offsprings_to_keep = [] 
 
     for offspring in offsprings:
-        if offspring not in offsprings:
-            is_parent = False
-            #here, we are comparing offsprings (list of ints) with genes (object attribute with list of ints)
-            for parent in parents:
-                if offspring == parent.genes:
-                    is_parent = True
-                    break
+        is_parent = False
+        #here, we are comparing offsprings (list of ints) with genes (object attribute with list of ints)
+        for parent in parents:
+            if offspring == parent.genes:
+                is_parent = True
+                break
 
-            if not is_parent:#clear duplicates & make into objects
-                individual = Chromosome(offspring, fitness=1, mutation=0.85)
-                offsprings_to_keep.append(individual)
+        if not is_parent:#clear duplicates & make into objects
+            individual = Chromosome(offspring, fitness=1)
+            offsprings_to_keep.append(individual)
 
+    # print("===KPC===")
+    # print("Number of offsprings produced:", len(offsprings_to_keep),"\n")
     return offsprings_to_keep
 
 
@@ -274,252 +276,267 @@ def kpc(parents,crossover_points_number):
     #             print("\n-----------THERE IS A DUPLICATE OFFSPRING!!!\n---------------------")
     #             break
 
-def mutation(population, gene_mutation_rate):
+def mutation_binary(population, gene_mutation_rate):
 	
-    mutated_chromosomes = []
+    if not isinstance(gene_mutation_rate, (int, float)) or isinstance(gene_mutation_rate, bool):
+        raise TypeError("gene_mutation_rate must be a number.")
+
+    if not 0 <= gene_mutation_rate <= 100:
+        raise ValueError("gene_mutation_rate must be between 0 and 100.")
+    
+    mutated_individuals = []
 	
-	for parent in population:
-		# Create a deep copy of the parent chromosome
-		mutated_parent = copy.deepcopy(parent) #when you create a copy of a list or object, it creates a reference to the original data rather than creating a new independent copy. This means that if you modify the copied variable, the original variable will also be affected.
+    for parent in population:
+	    # Create a deep copy of the parent chromosome
+        mutated_parent = copy.deepcopy(parent) #when you create a copy of a list or object, it creates a reference to the original data rather than creating a new independent copy. This means that if you modify the copied variable, the original variable will also be affected.
 		
         #roll a number from 0 to 100 for each bit. if it's smaller than the mutation rate, flip the bit
-		for i in range(len(mutated_parent.genes)):
-			if random.randrange(0, 100) < gene_mutation_rate:
-				mutated_parent.genes[i] = 1 - mutated_parent.genes[i]  # Flip the bit
+        for i in range(len(mutated_parent.genes)):
+            if random.randrange(0, 100) < gene_mutation_rate:
+                mutated_parent.genes[i] = 1 - mutated_parent.genes[i]  # Flip the bit
 		
 		# Check if mutated parent matches any original parent. If not add to the list to return
-		if mutated_parent != parent:
-			mutated_chromosomes.append(mutated_parent)
+        if mutated_parent.genes != parent.genes:
+            mutated_individuals.append(mutated_parent)
 	
-	if mutated_chromosomes:
-		return mutated_chromosomes
+    if mutated_individuals:
+        # print("==Mutation==")
+        # print("Number of mutated individuals:", len(mutated_individuals),"\n")
+        return mutated_individuals
 
-def mutation_2layer(population, gene_mutation_rate, parent_mutation_rate):			
-	mutated_chromosomes = []
+def mutation_2layer_binary(population, gene_mutation_rate, parent_mutation_rate):			
 	
-	for parent in population:
+    if not isinstance(gene_mutation_rate, (int, float)) or isinstance(gene_mutation_rate, bool):
+        raise TypeError("gene_mutation_rate must be a number.")
+
+    if not 0 <= gene_mutation_rate <= 100:
+        raise ValueError("gene_mutation_rate must be between 0 and 100.")
+    
+    if not isinstance(parent_mutation_rate, (int, float)) or isinstance(parent_mutation_rate, bool):
+        raise TypeError("parent_mutation_rate must be a number.")
+
+    if not 0 <= parent_mutation_rate <= 100:
+        raise ValueError("parent_mutation_rate must be between 0 and 100.")
+
+    mutated_individuals = []
+	
+    for parent in population:
 		# Create a deep copy of the parent chromosome
-		mutated_parent = copy.deepcopy(parent) #when you create a copy of a list or object, it creates a reference to the original data rather than creating a new independent copy. This means that if you modify the copied variable, the original variable will also be affected.
+        mutated_parent = copy.deepcopy(parent) #when you create a copy of a list or object, it creates a reference to the original data rather than creating a new independent copy. This means that if you modify the copied variable, the original variable will also be affected.
 		
         #roll a number from 0 to 100. if it is smaller than parent_mutation_rate, then roll a number for each bit of the chromosome. this is a 2layer mutation mechanic
-		if random.randrange(0,100) < parent_mutation_rate:
-			for i in range(len(mutated_parent.genes)):
-				if random.randrange(0, 100) < gene_mutation_rate:
-					mutated_parent.genes[i] = 1 - mutated_parent.genes[i]   # Flip the bit
+        if random.randrange(0,100) < parent_mutation_rate:
+            for i in range(len(mutated_parent.genes)):
+                if random.randrange(0, 100) < gene_mutation_rate:
+                    mutated_parent.genes[i] = 1 - mutated_parent.genes[i]   # Flip the bit
 
 			# Check if mutated parent matches any original parent
-			if mutated_parent != parent:
-				mutated_chromosomes.append(mutated_parent)
-				# print(f"Mutated parent is different from original parent. mut:", mutated_parent, "original parent:", parent )
-			# else:
-				# print(f"Mutated parent matches original parent. mut:", mutated_parent, "original parent:", parent)
+            if mutated_parent.genes != parent.genes:
+                mutated_individuals.append(mutated_parent)
 	
-	if mutated_chromosomes:
-		return mutated_chromosomes
+    if mutated_individuals:
+        # print("==Mutation==")
+        # print("Number of mutated individuals:", len(mutated_individuals),"\n")
+        return mutated_individuals
 
 def classic_roulette(population):
-	total_population_fitness = sum([i.fitness for i in population])#adds fitness values from all input parents together
-	total_population_fitness = round(total_population_fitness, 3)#rounds it up
-	chromosome_probabilities = [i.fitness/total_population_fitness for i in population]# if we round here, we put a hard cap on the number of the parents' population. This is because as the number of the populationn grows, the probabilities approach zero. So later at cumulative_probabilities = [round(i / cumulative_sum, 4) for i in cumulative_probabilities] we get a division by zero error.
+	
+    
+    for i in population:
+        if not isinstance(i.fitness , (int, float)) or isinstance(i.fitness , bool) or 0 > i.fitness:
+            raise TypeError("Roulette selections assume a positive float value for fitness of the individuals. If you want to use negative values, avoid roulettes.")   
+    
+    total_population_fitness = sum([i.fitness for i in population])#adds fitness values from all input parents together
+    total_population_fitness = round(total_population_fitness, 3)#rounds it up
+    chromosome_probabilities = [i.fitness/total_population_fitness for i in population]# if we round here, we put a hard cap on the number of the parents' population. This is because as the number of the populationn grows, the probabilities approach zero. So later at cumulative_probabilities = [round(i / cumulative_sum, 4) for i in cumulative_probabilities] we get a division by zero error.
 	# print(total_population_fitness,"\n")
 	# print(chromosome_probabilities,"\n")
 	
-	cumulative_probabilities = []
-	cumulative_sum = 0.0
+    cumulative_probabilities = []
+    cumulative_sum = 0.0
 	
     #make the probability spaces. each space corresponds to one parent ex. [0.25, 0.5, 0.75, 1.0]
-	for i in chromosome_probabilities:
-		cumulative_sum += i
-		cumulative_probabilities.append(cumulative_sum)
+    for i in chromosome_probabilities:
+        cumulative_sum += i
+        cumulative_probabilities.append(cumulative_sum)
 
 	# Normalize cumulative probabilities to ensure they add up to 1
-	cumulative_probabilities = [i / cumulative_sum for i in cumulative_probabilities]# as the number of parents increases probabilities for each become smaller/approach zero, because the probabilities are normalized and sum up to 1. if we round, some of the probabilities number ends up being the same as the number of parents' population increases. if the probabilities become the same the roulette won't function properly
+    cumulative_probabilities = [i / cumulative_sum for i in cumulative_probabilities]# as the number of parents increases probabilities for each become smaller/approach zero, because the probabilities are normalized and sum up to 1. if we round, some of the probabilities number ends up being the same as the number of parents' population increases. if the probabilities become the same the roulette won't function properly
 	
 	# print(cumulative_probabilities,"\n")
 	
     #get a random number
-	random_number=round(random.random(), 3)
-
-	# print(random_number,"\n")
+    random_number=round(random.random(), 3)
     
     #check at which probability space the number falls into. then get the corrsponding parent
-	for i in range(len(cumulative_probabilities)):
-		if random_number <= cumulative_probabilities[i]:
-			return population[i]
+    for i in range(len(cumulative_probabilities)):
+        if random_number <= cumulative_probabilities[i]:
+            return population[i]
 
 def roulette_multiparents_same_parent(population,no_of_parents_returned):
-    #check if no_of_parents_returned is greater than population
-	if len(population)<no_of_parents_returned:
-		print("You can't get more parents than you are providing. Either increase the parents population or decrease the number of parents returned")
-		exit()
+    
+    if not isinstance(no_of_parents_returned, int) or isinstance(no_of_parents_returned, bool):
+        raise TypeError("no_of_parents_returned must be an integer.")
+ 
+    for i in population:
+        if not isinstance(i.fitness , (int, float)) or isinstance(i.fitness , bool) or 0 > i.fitness:
+            raise TypeError("Roulette selections assume a positive float value for fitness of the individuals. If you want to use negative values, avoid roulettes.")    
+    
+    if no_of_parents_returned < 1:
+        raise ValueError("no_of_parents_returned must be at least 1.")
 
-	total_population_fitness = sum([i.fitness for i in population])#adds fitness values from all input parents together
-	total_population_fitness = round(total_population_fitness, 3)#rounds it up
-	chromosome_probabilities = [i.fitness/total_population_fitness for i in population]# if we round here, we put a hard cap on the number of the parents' population. This is because as the number of the populationn grows, the probabilities approach zero. So later at cumulative_probabilities = [round(i / cumulative_sum, 4) for i in cumulative_probabilities] we get a division by zero error.
+    if len(population) == 0:
+        raise ValueError("Cannot select parents from an empty population.")
+    
+    #check if no_of_parents_returned is greater than population
+    if len(population)<no_of_parents_returned:
+        raise ValueError("You can't get more parents than you are providing. Either increase the parents population or decrease the number of parents returned")
+
+    total_population_fitness = sum([i.fitness for i in population])#adds fitness values from all input parents together
+    total_population_fitness = round(total_population_fitness, 3)#rounds it up
+    chromosome_probabilities = [i.fitness/total_population_fitness for i in population]# if we round here, we put a hard cap on the number of the parents' population. This is because as the number of the populationn grows, the probabilities approach zero. So later at cumulative_probabilities = [round(i / cumulative_sum, 4) for i in cumulative_probabilities] we get a division by zero error.
 	# print(total_population_fitness,"\n")
 	# print(chromosome_probabilities,"\n")
 	
-	cumulative_probabilities = []
-	cumulative_sum = 0.0
+    cumulative_probabilities = []
+    cumulative_sum = 0.0
 	
     #make the probability spaces. each space corresponds to one parent ex. [0.25, 0.5, 0.75, 1.0]
-	for i in chromosome_probabilities:
-		cumulative_sum += i
-		cumulative_probabilities.append(cumulative_sum)
+    for i in chromosome_probabilities:
+        cumulative_sum += i
+        cumulative_probabilities.append(cumulative_sum)
 
 	# Normalize cumulative probabilities to ensure they add up to 1
-	cumulative_probabilities = [i / cumulative_sum for i in cumulative_probabilities]# as the number of parents increases probabilities for each become smaller/approach zero, because the probabilities are normalized and sum up to 1. if we round, some of the probabilities number ends up being the same as the number of parents' population increases. if the probabilities become the same the roulette won't function properly
+    cumulative_probabilities = [i / cumulative_sum for i in cumulative_probabilities]# as the number of parents increases probabilities for each become smaller/approach zero, because the probabilities are normalized and sum up to 1. if we round, some of the probabilities number ends up being the same as the number of parents' population increases. if the probabilities become the same the roulette won't function properly
 	
 	# print(cumulative_probabilities,"\n")
 
-	random_numbers = []
+    random_numbers = []
 
 	#generate random numbers and add them to a list. this stops when the random numbers generated are more than no_of_parents_returned
-	while len(random_numbers) < no_of_parents_returned:
-		random_number=round(random.random(), 2)
-		random_numbers.append(random_number)
+    while len(random_numbers) < no_of_parents_returned:
+        random_number=round(random.random(), 2)
+        random_numbers.append(random_number)
 	
 	# print("ran:",random_numbers,"\n")
 	
-	parents_to_return = []
+    parents_to_return = []
 
 	#check at which cumulative probability range each above random numbers falls in. add corresponding parent to the selected population
-	for x in random_numbers:
-		for i in range(len(cumulative_probabilities)):
-			if x <= cumulative_probabilities[i]:
-				parents_to_return.append(population[i])
-				break
+    for x in random_numbers:
+        for i in range(len(cumulative_probabilities)):
+            if x <= cumulative_probabilities[i]:
+                parents_to_return.append(population[i])
+                break
 
-	if parents_to_return:
-		return parents_to_return
-	else:
-		print("No parents chosen to return")
-		return
+    if parents_to_return:
+        return parents_to_return
+    else:
+        print("No parents chosen to return")
+        return
 
 def roulette_unique_parents(population,no_of_parents_returned):
-	#check if no_of_parents_returned is greater than population
-	if no_of_parents_returned > len(population):
-		print("You can't select more parents than the initially provided population, silly! Either increase the number of parents or decrease the the number of parents requested to return.")
-		exit()
 	
-	total_population_fitness = sum([i.fitness for i in population])#adds fitness values from all input parents together
-	total_population_fitness = round(total_population_fitness, 3)#rounds it up
-	chromosome_probabilities = [i.fitness/total_population_fitness for i in population] # if we round here, we put a hard cap on the number of the parents' population. This is because as the number of the populationn grows, the probabilities approach zero. So later at cumulative_probabilities = [round(i / cumulative_sum, 4) for i in cumulative_probabilities] we get a division by zero error.
+    if not isinstance(no_of_parents_returned, int) or isinstance(no_of_parents_returned, bool):
+        raise TypeError("no_of_parents_returned must be an integer.")
+    
+    for i in population:
+        if not isinstance(i.fitness , (int, float)) or isinstance(i.fitness , bool) or 0 > i.fitness:
+            raise TypeError("Roulette selections assume a positive float value for fitness of the individuals. If you want to use negative values avoid roulettes.")
+    
+    if no_of_parents_returned < 1:
+        raise ValueError("no_of_parents_returned must be at least 1.")
+    
+    #check if no_of_parents_returned is greater than population
+    if no_of_parents_returned > len(population):
+        raise ValueError("You can't select more parents than the initially provided population, silly! Either increase the number of parents or decrease the the number of parents requested to return.")
+	
+    total_population_fitness = sum([i.fitness for i in population])#adds fitness values from all input parents together
+    total_population_fitness = round(total_population_fitness, 3)#rounds it up
+    chromosome_probabilities = [i.fitness/total_population_fitness for i in population] # if we round here, we put a hard cap on the number of the parents' population. This is because as the number of the populationn grows, the probabilities approach zero. So later at cumulative_probabilities = [round(i / cumulative_sum, 4) for i in cumulative_probabilities] we get a division by zero error.
 	# print("total_population_fitness:",total_population_fitness,"\n")
 	# print("chromosome_probabilities:",chromosome_probabilities,"\n")
 	
-	cumulative_probabilities = []
-	cumulative_sum = 0.0
+    cumulative_probabilities = []
+    cumulative_sum = 0.0
 	
     #make the probability spaces. each space corresponds to one parent ex. [0.25, 0.5, 0.75, 1.0]
-	for i in chromosome_probabilities:
-		cumulative_sum += i
-		cumulative_probabilities.append(cumulative_sum)
+    for i in chromosome_probabilities:
+        cumulative_sum += i
+        cumulative_probabilities.append(cumulative_sum)
 	
 
 	# Normalize cumulative probabilities to ensure they add up to 1
-	cumulative_probabilities = [i / cumulative_sum for i in cumulative_probabilities]# as the number of parents increases probabilities for each become smaller/approach zero, because the probabilities are normalized and sum up to 1. if we round, some of the probabilities number ends up being the same as the number of parents' population increases. if the probabilities become the same the roulette won't function properly
+    cumulative_probabilities = [i / cumulative_sum for i in cumulative_probabilities]# as the number of parents increases probabilities for each become smaller/approach zero, because the probabilities are normalized and sum up to 1. if we round, some of the probabilities number ends up being the same as the number of parents' population increases. if the probabilities become the same the roulette won't function properly
 	
 	# print(cumulative_probabilities,"\n")
 
 	#generate random numbers. each number corresponds to one specific cumulative probability range.
 	#add the corresponding index of the specific probability range to unique indexes list, as long as the list does not already contain the index
 	#use the unique indexes list to bring forth the selected parrents
-	unique_indexes = []
+    unique_indexes = []
 	
-	while len(unique_indexes) < no_of_parents_returned:
-		random_number=round(random.random(), 2)
-		for i in range(len(cumulative_probabilities)):
-			if random_number <= cumulative_probabilities[i]:
-				if i not in unique_indexes:
-					unique_indexes.append(i)
-				break
+    while len(unique_indexes) < no_of_parents_returned:
+        random_number=round(random.random(), 2)
+        for i in range(len(cumulative_probabilities)):
+            if random_number <= cumulative_probabilities[i]:
+                if i not in unique_indexes:
+                    unique_indexes.append(i)
+                break
 				
 
 	#check if the indexes are unique_indexes
-	if len(unique_indexes) != len(set(unique_indexes)):
-		print("parents_to_return does not contain truly unique indexes")
+    if len(unique_indexes) != len(set(unique_indexes)):
+        print("parents_to_return does not contain truly unique indexes")
 	
-	parents_to_return = []
+    parents_to_return = []
 	
-	for i in unique_indexes:
-		parents_to_return.append(population[i])
+    for i in unique_indexes:
+        parents_to_return.append(population[i])
 	
-	if parents_to_return:
-		return parents_to_return
-	else:
-		print("No parents chosen to return")
-		return
+    if parents_to_return:
+        return parents_to_return
+    else:
+        print("No parents chosen to return")
+        return
 
-def cull_by_percentage(parents, percentage_to_cull, no_of_parents_to_select):
+def cull_by_percentage(parents, percentage_to_cull, no_of_minimum_parents_to_keep):
     #cull_by_percentage function has to return enough parents to pass the checks of the other functions (crossover and selection). Naturally, crossover cant return more parents than it gets.
     #kpc needs at least 2 parents to function. so we put a hard limit to this. if the population is thinned too much, there is a chance less parents will be left for selection.
     #so if, for example, 2 parents are left, and we have determined 3 to be chosen at the selection stage, then we get an error.
-    #Using no_of_parents_to_select we secure this won't happen, because the selection stage gets the same number of parents as the condition to apply or not cull below => if len(next_gen) >= no_of_parents_to_select
+    #Using no_of_minimum_parents_to_keep we secure this won't happen, because the selection stage gets the same number of parents as the condition to apply or not cull below => if len(next_gen) >= no_of_minimum_parents_to_keep
     
-   if not 0 <= percentage_to_cull <= 100:
-        raise ValueError(
-            "C'mon man, percentage_to_cull must be between 0 and 100."
-        )
+    if not 0 <= percentage_to_cull <= 100:
+        raise ValueError("C'mon man, percentage_to_cull must be between 0 and 100.")
 
-     if len(parents) < no_of_parents_to_select:
-        raise ValueError(
-            "C'mon man, Population is smaller than the required number of parents to select."
+    if len(parents) < no_of_minimum_parents_to_keep:
+        raise ValueError("C'mon man, Population is smaller than the required number of parents to select.")
+        print("====Culling===")
+        print("Number of parents received as input:", len(parents))
+
+    # print("====Culling===")
+    # print("Number of parents received:", len(parents))
+    # print("Number of minimum_parents to keep:", no_of_minimum_parents_to_keep)
 
     sorted_individuals = sorted(parents, key=lambda x: x.fitness, reverse=True)#reverse=True => highest to lowest
     
     next_gen = []
     #turn given percentage to the corresponding number of parents that should be removed
     no_of_parents_removed = math.floor((percentage_to_cull / 100) * len(sorted_individuals))
-    print("Initial population before cull:",len(sorted_individuals))
-    print("No of parents removed:",no_of_parents_removed)
-    # print("===============")
+    # print("No of parents removed:",no_of_parents_removed)
     
     if no_of_parents_removed != 0:
+        # print("Number of parents removed:", no_of_parents_removed)
         next_gen = sorted_individuals[:len(sorted_individuals)-no_of_parents_removed]#keep all except no_of_parents_removed last individuals
-        print("next gen:",len(next_gen))
-        if len(sorted_individuals) - len(next_gen) != no_of_parents_removed:
-            print("Culling does not remove parents as expected. It is supposed to remove no_of_parents_removed from the bottom of the parents' list and return the rest, but there is a mixup in the calculations within the function")
-        if len(next_gen) >= no_of_parents_to_select:#check if the returned individuals are 
-            return next_gen'
+        # if len(sorted_individuals) - len(next_gen) != no_of_parents_removed:
+            # print("Culling does not remove parents as expected. It is supposed to remove no_of_parents_removed from the bottom of the parents' list and return the rest, but there is a mixup in the calculations within the function")
+        if len(next_gen) >= no_of_minimum_parents_to_keep:#check if the returned individuals are more than the no_of_minimum_parents_to_keep
+            # print("Number of individuals in next generation:", len(next_gen))
+            return next_gen
         else:
-            print("You are asking less individuals to be returned than the number of parents to be selected. There will be no culling")
+            print("You are asking less individuals to be returned than the number of parents to be selected. There will be no culling\n")
             return sorted_individuals
 		
     else:
-        print("total parents", len(sorted_individuals))
-        print("parents to remove:",no_of_parents_removed)
-        print("If the designated number of offsprings is removed the program will break. No offsprings will be removed")
+        # print("parents to remove:",no_of_parents_removed)
         return sorted_individuals
-
-
-
-#----------initialization of first population-------------------------------
-
-#gen0_binary creates lists of genes. 1st is the number of parents created. 2nd is the number of genes for each.
-population = gen0_binary(20, 10)
-
-
-
-
-for iterator in range(5):
-
-# while True:
-
-    #----------selection step----------------------------- 
-    selection=roulette_unique_parents(population,3)
-    
-# crossover - produce offsprings
-    offsprings=kpc(selection, 3)
-
-# mutation
-    if offsprings:
-        mutated = mutation(offsprings, 20)
-
-        if mutated:
-            offsprings = offsprings + mutated
-
-    # cull population
-    next_gen=cull_by_percentage(offsprings, 20, 10)
-    if next_gen:
-        population = next_gen
